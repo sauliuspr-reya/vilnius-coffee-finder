@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import path from 'path';
+import { AspectRatingType } from '@googlemaps/google-maps-services-js';
 
 // Load environment variables from .env.local
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -17,12 +18,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Specific type for Google's PlaceOpeningHours
 export type PlaceOpeningHours = {
-  open_now?: boolean;
-  periods?: {
+  open_now: boolean;
+  periods: {
     open: { day: number; time: string; date?: string; } | { day: number; time: string; };
     close?: { day: number; time: string; date?: string; } | { day: number; time: string; };
   }[];
-  weekday_text?: string[];
+  weekday_text: string[];
   permanently_closed?: boolean;
   // Allows for other potential fields Google might add, using unknown for better type safety
   [key: string]: unknown; 
@@ -49,6 +50,20 @@ export type PlaceFeatures = {
   takeout?: boolean | null;
 };
 
+// Define the structure of a single review object from Google Places
+export type PlaceReview = {
+  author_name: string;
+  author_url?: string; // Optional
+  language: string; 
+  profile_photo_url: string; 
+  rating: number;
+  relative_time_description: string; // e.g., "a month ago"
+  text: string; 
+  time: number; // Unix timestamp
+  translated?: boolean; // Optional
+  aspects: { rating: number; type: AspectRatingType; }[]; // Use imported AspectRatingType
+};
+
 export type CoffeePlace = {
   id: string;
   name: string;
@@ -65,12 +80,7 @@ export type CoffeePlace = {
     height: number;
     html_attributions: string[];
   }[];
-  reviews?: { // Google reviews
-    author_name: string;
-    rating: number;
-    text: string;
-    time: number;
-  }[];
+  reviews?: PlaceReview[] | undefined; // Ensure this is Type[] | undefined, not | null
   ring29_rating?: number; // Ring29 custom rating
   ring29_user_ratings_total?: number; // Ring29 user ratings total
   chatgpt_summary?: string; // Summary from ChatGPT API
@@ -79,13 +89,13 @@ export type CoffeePlace = {
   data_last_scraped_at?: string; // Timestamp of the last web/social scrape
   last_updated: string;
   // New metadata fields from database schema
-  website?: string | null;
-  international_phone_number?: string | null;
-  price_level?: number | null;
-  opening_hours?: PlaceOpeningHours | null; // Using specific type
-  google_maps_url?: string | null;
-  business_status?: string | null;
-  editorial_summary?: PlaceEditorialSummary | null; // Using specific type
-  place_types?: string[] | null;
-  place_features?: PlaceFeatures | null; // Using specific type
+  website?: string | undefined; 
+  international_phone_number?: string | undefined; 
+  price_level?: number; 
+  opening_hours?: PlaceOpeningHours | undefined; // Using specific type
+  google_maps_url?: string | undefined; 
+  business_status?: string | undefined; 
+  editorial_summary?: PlaceEditorialSummary | undefined; // Using specific type
+  place_types?: string[] | null; 
+  place_features?: PlaceFeatures | undefined; // Using specific type
 };

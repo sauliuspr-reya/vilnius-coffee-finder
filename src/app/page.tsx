@@ -2,6 +2,12 @@
 import { getCoffeePlaces } from "@/lib/api";
 import CoffeeCard from "@/components/CoffeeCard";
 import CoffeeMap from '@/components/CoffeeMap';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Vilnius Coffee Finder - Discover the Best Cafes',
+  description: 'Explore and discover the best coffee shops and cafes in Vilnius, Lithuania. View ratings, reviews, and locations.',
+};
 
 export const dynamic = 'force-dynamic';
 
