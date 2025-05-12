@@ -48,7 +48,6 @@ const VILNIUS_LNG = 25.279652;
 
 const MAX_RESULTS = 200;
 const MAX_PHOTOS_PER_PLACE = 3;
-const PHOTO_MAX_WIDTH = 1024;
 const PHOTO_BUCKET_NAME = 'place-photos'; // Use hyphen as per user's latest instruction
 
 // Interface for Google Place Details including specific boolean fields we care about
@@ -76,7 +75,6 @@ interface TransformedGooglePlaceData {
   place_types?: string[];
   place_features?: PlaceFeatures; // Our app's type
   reviews?: PlaceReview[]; // Our app's PlaceReview (time as number, translated as boolean)
-  photos_metadata?: PlacePhoto[]; // Google's PlacePhoto type, assuming our CoffeePlace.photos_metadata uses this too
 }
 
 function slugify(text: string): string {
@@ -163,7 +161,6 @@ function transformGooglePlaceDetails(
       time: typeof review.time === 'string' ? parseInt(review.time, 10) : (review.time as number), // Parse time to number
       aspects: review.aspects as { rating: number; type: AspectRatingType; }[] ?? [],
     })) ?? undefined,
-    photos_metadata: googlePlace.photos?.map(p => ({ ...p })) ?? undefined, // Retain PlacePhoto structure
   };
 }
 
@@ -363,16 +360,12 @@ async function fetchCoffeePlaces() {
           for (let i = 0; i < Math.min((placeDetailsFromGoogle.photos || []).length, MAX_PHOTOS_PER_PLACE); i++) {
             const photo: PlacePhoto = placeDetailsFromGoogle.photos![i]; // Added non-null assertion since we check length
             const photoRef = photo.photo_reference;
+            const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1024&photoreference=${photoRef}&key=${GOOGLE_MAPS_API_KEY}`;
+            // Removed unused variable
 
-            if (!photoRef) {
-              console.warn(`  Photo reference missing for photo ${i + 1} of ${placeDetailsFromGoogle.name}. Skipping.`);
-              continue;
-            }
-
-            const photoApiUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${PHOTO_MAX_WIDTH}&photoreference=${photoRef}&key=${GOOGLE_MAPS_API_KEY}`;
-
-            try {
-              const photoResponse = await fetch(photoApiUrl);
+            try { // Restore try block
+              // Download photo from Google
+              const photoResponse = await fetch(photoUrl);
               if (!photoResponse.ok) {
                 console.error(`  Failed to download photo ${i + 1} for ${placeDetailsFromGoogle.name} (ref: ${photoRef.substring(0, 10)}...): ${photoResponse.status} ${photoResponse.statusText}`);
                 continue;
@@ -381,25 +374,25 @@ async function fetchCoffeePlaces() {
               const contentType = photoResponse.headers.get('content-type') || 'image/jpeg';
               const fileExtension = contentType.split('/')[1]?.toLowerCase() || 'jpg';
 
-              const storageFilePath = `${place.place_id}/${i}.${fileExtension}`;
+              const storageFilePathFinal = `${place.place_id}/${i}.${fileExtension}`;
 
               const { error: uploadError } = await supabaseAdmin.storage
                 .from(PHOTO_BUCKET_NAME)
-                .upload(storageFilePath, imageBuffer, {
+                .upload(storageFilePathFinal, imageBuffer, {
                   contentType: contentType,
                   upsert: true,
                 });
 
               if (uploadError) {
-                console.error(`  Error uploading photo ${storageFilePath} to Supabase:`, uploadError.message);
+                console.error(`  Error uploading photo ${storageFilePathFinal} to Supabase:`, uploadError.message);
                 continue;
               }
-              console.log(`  Successfully uploaded photo ${storageFilePath}`);
+              console.log(`  Successfully uploaded photo ${storageFilePathFinal}`);
 
               // Get public URL for the uploaded photo
               const { data: publicUrlData } = supabaseAdmin.storage
                 .from(PHOTO_BUCKET_NAME)
-                .getPublicUrl(storageFilePath);
+                .getPublicUrl(storageFilePathFinal);
               
               const publicSupabaseUrl = publicUrlData?.publicUrl;
 
@@ -411,28 +404,29 @@ async function fetchCoffeePlaces() {
                   html_attributions: photo.html_attributions
                 });
               } else {
-                console.warn(`  Could not retrieve public URL for ${storageFilePath}`);
+                console.warn(`  Could not retrieve public URL for ${storageFilePathFinal}`);
               }
 
-              // The existing logic to insert into 'place_photos' table can remain if you want a separate log/reference
               // Or it can be removed/modified if coffeePlaceForDb.photos is the single source of truth for displayable photos.
-              const { error: insertPhotoError } = await supabaseAdmin.from('place_photos').insert({
-                coffee_place_id: place.place_id,
-                storage_path: storageFilePath,
-                original_source_url: photo.html_attributions?.[0] || null,
-                alt_text: `Photo ${i + 1} of ${placeDetailsFromGoogle.name || 'coffee place'}`,
-                order_index: i,
-                width: photo.width,
-                height: photo.height,
-              });
-
-              if (insertPhotoError) {
-                console.error(`  Error inserting photo metadata for ${storageFilePath}:`, insertPhotoError.message);
-              } else {
-                console.log(`  Successfully inserted photo metadata for ${storageFilePath}`);
-              }
+              // --- Temporarily Commented Out ---
+              // const { error: insertPhotoError } = await supabaseAdmin.from('place_photos').insert({
+              //   coffee_place_id: place.place_id, // Use the ID from the initial list fetch
+              //   storage_path: storageFilePathFinal,
+              //   original_source_url: photo.html_attributions?.[0] || null,
+              //   alt_text: `Photo of ${placeDetailsFromGoogle.name || 'coffee place'} ${i + 1}`,
+              //   order_index: i,
+              //   width: photo.width,
+              //   height: photo.height,
+              //   // Assuming created_at and updated_at have default values or triggers
+              // });
+              //
+              // if (insertPhotoError) {
+              //   console.error(`  Error inserting photo metadata for ${storageFilePathFinal}:`, insertPhotoError.message);
+              //   // Decide if you want to continue processing other photos or stop
+              // } 
+              // --- End Commented Out ---
             } catch (e: unknown) {
-              console.error(`  Exception processing photo ${i + 1} (ref: ${photoRef.substring(0, 10)}...) for ${placeDetailsFromGoogle.name}:`, (e as Error).message);
+              console.error(`  Exception processing photo ${i + 1} (ref: ${photoRef?.substring(0, 10)}...) for ${placeDetailsFromGoogle.name}:`, (e as Error).message);
             }
           }
         }
