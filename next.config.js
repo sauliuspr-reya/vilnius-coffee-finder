@@ -8,6 +8,12 @@ const nextConfig = {
         port: '',
         pathname: '/maps/api/place/photo/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'vijkvgfgcvkwouivfrjw.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/place-photos/**',
+      },
     ],
   },
 };
