@@ -75,10 +75,10 @@ export type CoffeePlace = {
   rating?: number; // Google rating
   user_ratings_total?: number; // Google user ratings total
   photos?: {
-    photo_reference: string;
+    url: string;
     width: number;
     height: number;
-    html_attributions: string[];
+    html_attributions?: string[];
   }[];
   reviews?: PlaceReview[] | undefined; // Ensure this is Type[] | undefined, not | null
   ring29_rating?: number; // Ring29 custom rating

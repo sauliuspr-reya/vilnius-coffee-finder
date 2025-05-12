@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getCoffeePlaceById, getPhotoUrl } from '@/lib/api';
+import { getCoffeePlaceById } from '@/lib/api';
 import { notFound } from 'next/navigation';
 import ChatGPTEnrichment from '@/components/ChatGPTEnrichment';
 import ImageGallery from '@/components/ImageGallery';
@@ -52,9 +52,10 @@ export default async function PlaceDetailPage({ params }: PageProps) {
   }
 
   // Prepare photo URLs for the gallery
-  const galleryPhotoUrls = place.photos && place.photos.length > 0
-    ? place.photos.map(photo => getPhotoUrl(photo.photo_reference, 1024)) // Fetch larger images for modal
-    : ['/coffee-placeholder.jpg']; // Fallback if no photos
+  const photoUrlsForGallery = place.photos
+    ?.map(photo => photo.url) // Use the direct url from the new structure
+    .filter((url): url is string => !!url) // Filter out any undefined/null URLs and satisfy TypeScript
+    .slice(0, 10) ?? [];
 
   // Helper to render price level
   const renderPriceLevel = (level: number | null | undefined) => {
@@ -69,7 +70,7 @@ export default async function PlaceDetailPage({ params }: PageProps) {
       </Link>
       
       <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-        <ImageGallery photoUrls={galleryPhotoUrls} placeName={place.name} />
+        <ImageGallery photoUrls={photoUrlsForGallery} placeName={place.name} />
         
         <div className="p-6">
           <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">{place.name}</h1>

@@ -1,7 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { CoffeePlace } from '@/lib/supabase';
-import { getPhotoUrl } from '@/lib/api';
 
 interface CoffeeCardProps {
   place: CoffeePlace;
@@ -9,8 +8,8 @@ interface CoffeeCardProps {
 
 export default function CoffeeCard({ place }: CoffeeCardProps) {
   // Get the first photo if available
-  const photoUrl = place.photos && place.photos.length > 0
-    ? getPhotoUrl(place.photos[0].photo_reference)
+  const photoUrl = place.photos && place.photos.length > 0 && place.photos[0].url
+    ? place.photos[0].url
     : '/coffee-placeholder.jpg';
 
   return (

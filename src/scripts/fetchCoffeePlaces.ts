@@ -354,9 +354,8 @@ async function fetchCoffeePlaces() {
           // Fields like 'ai_summary', 'user_submitted_content' etc. are optional or handled elsewhere.
         } as CoffeePlace; // Added 'as CoffeePlace' for stricter checking during assignment construction
 
-        // console.log(' Upserting CoffeePlace:', JSON.stringify(coffeePlaceForDb, null, 2));
-
-        coffeePlaces.push(coffeePlaceForDb);
+        // Prepare an array for Supabase photo URLs and metadata
+        const supabasePhotosArray: { url: string; width: number; height: number; html_attributions?: string[] }[] = [];
 
         if (placeDetailsFromGoogle.photos && placeDetailsFromGoogle.photos.length > 0) {
           console.log(`  Processing photos for ${placeDetailsFromGoogle.name}...`);
@@ -397,6 +396,26 @@ async function fetchCoffeePlaces() {
               }
               console.log(`  Successfully uploaded photo ${storageFilePath}`);
 
+              // Get public URL for the uploaded photo
+              const { data: publicUrlData } = supabaseAdmin.storage
+                .from(PHOTO_BUCKET_NAME)
+                .getPublicUrl(storageFilePath);
+              
+              const publicSupabaseUrl = publicUrlData?.publicUrl;
+
+              if (publicSupabaseUrl) {
+                supabasePhotosArray.push({
+                  url: publicSupabaseUrl,
+                  width: photo.width,
+                  height: photo.height,
+                  html_attributions: photo.html_attributions
+                });
+              } else {
+                console.warn(`  Could not retrieve public URL for ${storageFilePath}`);
+              }
+
+              // The existing logic to insert into 'place_photos' table can remain if you want a separate log/reference
+              // Or it can be removed/modified if coffeePlaceForDb.photos is the single source of truth for displayable photos.
               const { error: insertPhotoError } = await supabaseAdmin.from('place_photos').insert({
                 coffee_place_id: place.place_id,
                 storage_path: storageFilePath,
@@ -417,6 +436,11 @@ async function fetchCoffeePlaces() {
             }
           }
         }
+        // Assign the collected Supabase photo URLs to the main coffee place object
+        coffeePlaceForDb.photos = supabasePhotosArray.length > 0 ? supabasePhotosArray : undefined;
+
+        coffeePlaces.push(coffeePlaceForDb);
+
       }
 
       pageToken = next_page_token;

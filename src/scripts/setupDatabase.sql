@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS coffee_places (
   trending_score_web NUMERIC DEFAULT 0, -- Score based on web scraping
   trending_score_social NUMERIC DEFAULT 0, -- Score based on social media scraping
   data_last_scraped_at TIMESTAMP WITH TIME ZONE, -- Timestamp of the last web/social scrape
+  created_at TIMESTAMPTZ DEFAULT NOW(), -- Added created_at column
   last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   slug TEXT UNIQUE, -- Added for user-friendly URLs
   -- New metadata fields added
@@ -41,6 +42,7 @@ ALTER TABLE coffee_places ADD COLUMN IF NOT EXISTS place_types TEXT[];
 ALTER TABLE coffee_places ADD COLUMN IF NOT EXISTS place_features JSONB;
 ALTER TABLE coffee_places ADD COLUMN IF NOT EXISTS chatgpt_extracted_rating TEXT;
 ALTER TABLE coffee_places ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE;
+ALTER TABLE coffee_places ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ;
 
 -- Create function to create the coffee_places table
 CREATE OR REPLACE FUNCTION create_coffee_places_table()
@@ -62,6 +64,7 @@ BEGIN
     trending_score_web NUMERIC DEFAULT 0, -- Score based on web scraping
     trending_score_social NUMERIC DEFAULT 0, -- Score based on social media scraping
     data_last_scraped_at TIMESTAMP WITH TIME ZONE, -- Timestamp of the last web/social scrape
+    created_at TIMESTAMPTZ DEFAULT NOW(), -- Added created_at column
     last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     slug TEXT UNIQUE, -- Added for user-friendly URLs
     -- New metadata fields added (mirroring the main CREATE TABLE)
@@ -113,6 +116,9 @@ USING (true); -- Or check (auth.uid() = user_id)
 CREATE POLICY "Users can delete their own photos." -- This might need adjustment
 ON place_photos FOR DELETE
 USING (true); -- Or check (auth.uid() = user_id)
+
+-- Enable moddatetime extension for automatic timestamp updates
+CREATE EXTENSION IF NOT EXISTS moddatetime;
 
 -- Trigger to update 'updated_at' timestamp
 CREATE OR REPLACE TRIGGER handle_updated_at_place_photos
